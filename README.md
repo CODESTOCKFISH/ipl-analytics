@@ -64,7 +64,7 @@ An end-to-end data analytics project analyzing IPL performance using custom metr
 
 ## 🌐 Live Demo
 
-👉 Coming soon (deployment in progress)
+🚧 Deployment in progress — live app coming soon
 
 ---
 
