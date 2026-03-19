@@ -1,6 +1,6 @@
 # 🏏 IPL Analytics Dashboard
 
-An interactive data analytics dashboard built using **Python, Pandas, and Streamlit** to analyze IPL player performance across different match phases.
+An end-to-end data analytics project analyzing IPL performance using custom metrics and interactive visualizations.
 
 ---
 
