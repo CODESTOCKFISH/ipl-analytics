@@ -1,6 +1,6 @@
 # 🏏 IPL Analytics Dashboard
 
-An end-to-end data analytics project analyzing IPL performance from 2008-2024 editions  using custom metrics and interactive visualizations.
+An end-to-end data analytics project analyzing IPL performance from 2008-2023 editions  using custom metrics and interactive visualizations.
 
 ---
 
