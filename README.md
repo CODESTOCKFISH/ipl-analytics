@@ -27,12 +27,12 @@ An end-to-end data analytics project analyzing IPL performance using custom metr
 - Combined batting + bowling performance
 - Includes **role-based contributions (even part-time players depending on phase)**
 
-### 🔍 Search Functionality
+# 🔍 Search Functionality
 - Easily search any player across datasets
 
 ---
 
-## 📈 Key Highlights
+# 📈 Key Highlights
 
 - Built **custom impact metrics** instead of relying on raw stats  
 - Solved real-world issues like:
@@ -44,7 +44,7 @@ An end-to-end data analytics project analyzing IPL performance using custom metr
 
 ---
 
-## 🛠️ Tech Stack
+# 🛠️ Tech Stack
 
 - Python
 - Pandas
@@ -53,7 +53,7 @@ An end-to-end data analytics project analyzing IPL performance using custom metr
 
 ---
 
-## 📂 Dataset
+# 📂 Dataset
 
 - IPL ball-by-ball dataset
 - Includes:
@@ -62,13 +62,13 @@ An end-to-end data analytics project analyzing IPL performance using custom metr
 
 ---
 
-## 🌐 Live Demo
+# 🌐 Live Demo
 
-🚧 Deployment in progress — live app coming soon
+👉 https://ipl-analytics-codestockfish.streamlit.app
 
 ---
 
-## 📌 Future Improvements
+# 📌 Future Improvements
 
 - Advanced visualizations (Plotly / Seaborn)
 - Player vs Player comparison tool
