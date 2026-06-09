@@ -840,40 +840,134 @@ for tab, name in zip(tabs[:4], phases.keys()):
         st.markdown('<hr class="ipl-divider">', unsafe_allow_html=True)
         team_contribution(df)
 
+# -------------------------
+# PLAYER ALIAS MAP
+# Maps common full names / nicknames → dataset name
+# -------------------------
+PLAYER_ALIASES = {
+    "virat kohli": "V Kohli", "kohli": "V Kohli", "virat": "V Kohli",
+    "rohit sharma": "RG Sharma", "rohit": "RG Sharma", "hitman": "RG Sharma",
+    "ms dhoni": "MS Dhoni", "dhoni": "MS Dhoni", "msd": "MS Dhoni", "thala": "MS Dhoni",
+    "jasprit bumrah": "JJ Bumrah", "bumrah": "JJ Bumrah",
+    "trent boult": "TA Boult", "boult": "TA Boult", "trent": "TA Boult",
+    "virender sehwag": "V Sehwag", "sehwag": "V Sehwag", "viru": "V Sehwag",
+    "ab de villiers": "AB de Villiers", "de villiers": "AB de Villiers", "abv": "AB de Villiers", "ab": "AB de Villiers",
+    "sachin tendulkar": "SR Tendulkar", "sachin": "SR Tendulkar", "tendulkar": "SR Tendulkar",
+    "suresh raina": "SK Raina", "raina": "SK Raina",
+    "hardik pandya": "HH Pandya", "hardik": "HH Pandya", "pandya": "HH Pandya",
+    "kl rahul": "KL Rahul", "rahul": "KL Rahul",
+    "rishabh pant": "RR Pant", "pant": "RR Pant", "rishabh": "RR Pant",
+    "shikhar dhawan": "S Dhawan", "dhawan": "S Dhawan", "gabbar": "S Dhawan",
+    "ravindra jadeja": "RA Jadeja", "jadeja": "RA Jadeja", "jaddu": "RA Jadeja",
+    "ravichandran ashwin": "R Ashwin", "ashwin": "R Ashwin",
+    "yuzvendra chahal": "YS Chahal", "chahal": "YS Chahal",
+    "bhuvneshwar kumar": "B Kumar", "bhuvi": "B Kumar", "bhuvneshwar": "B Kumar",
+    "lasith malinga": "SL Malinga", "malinga": "SL Malinga",
+    "dale steyn": "DW Steyn", "steyn": "DW Steyn",
+    "andre russell": "AD Russell", "russell": "AD Russell",
+    "gautam gambhir": "G Gambhir", "gambhir": "G Gambhir",
+    "yuvraj singh": "Yuvraj Singh", "yuvraj": "Yuvraj Singh", "yuvi": "Yuvraj Singh",
+    "dinesh karthik": "KD Karthik", "karthik": "KD Karthik", "dk": "KD Karthik",
+    "harbhajan singh": "Harbhajan Singh", "harbhajan": "Harbhajan Singh", "bhajji": "Harbhajan Singh",
+    "zaheer khan": "Z Khan", "zaheer": "Z Khan",
+    "ajinkya rahane": "AM Rahane", "rahane": "AM Rahane",
+    "david warner": "DA Warner", "warner": "DA Warner",
+    "shane watson": "SR Watson", "watson": "SR Watson",
+    "chris gayle": "CH Gayle", "gayle": "CH Gayle", "universe boss": "CH Gayle",
+    "adam gilchrist": "AC Gilchrist", "gilchrist": "AC Gilchrist", "gilly": "AC Gilchrist",
+    "brendon mccullum": "BB McCullum", "mccullum": "BB McCullum",
+    "mitchell starc": "MA Starc", "starc": "MA Starc",
+    "pat cummins": "PJ Cummins", "cummins": "PJ Cummins",
+    "ben stokes": "BA Stokes", "stokes": "BA Stokes",
+    "jos buttler": "JC Buttler", "buttler": "JC Buttler",
+    "faf du plessis": "F du Plessis", "faf": "F du Plessis",
+    "quinton de kock": "Q de Kock", "de kock": "Q de Kock",
+    "ishan kishan": "Ishan Kishan", "ishan": "Ishan Kishan",
+    "shubman gill": "Shubman Gill", "gill": "Shubman Gill", "shubman": "Shubman Gill",
+    "ruturaj gaikwad": "RD Gaikwad", "ruturaj": "RD Gaikwad", "gaikwad": "RD Gaikwad",
+    "suryakumar yadav": "SA Yadav", "surya": "SA Yadav", "suryakumar": "SA Yadav", "sky": "SA Yadav",
+    "mohammed shami": "Mohammed Shami", "shami": "Mohammed Shami",
+    "umesh yadav": "UT Yadav", "umesh": "UT Yadav",
+    "amit mishra": "A Mishra", "mishra": "A Mishra",
+    "piyush chawla": "PP Chawla", "chawla": "PP Chawla",
+}
+
+@st.cache_data
+def get_all_players():
+    players = pd.concat([
+        deliveries["batter"].drop_duplicates(),
+        deliveries["bowler"].drop_duplicates()
+    ]).drop_duplicates().sort_values().tolist()
+    return players
+
+def resolve_player(query, all_players):
+    """Resolve a search query to a dataset player name."""
+    q = query.strip().lower()
+    # Check alias map first
+    if q in PLAYER_ALIASES:
+        return PLAYER_ALIASES[q]
+    # Partial alias match
+    for alias, name in PLAYER_ALIASES.items():
+        if q in alias or alias in q:
+            return name
+    # Direct exact match in dataset
+    for p in all_players:
+        if p.lower() == q:
+            return p
+    return None
+
+def fuzzy_suggestions(query, all_players, n=10):
+    """Return top N players whose name contains any word from the query."""
+    q = query.strip().lower()
+    words = q.split()
+    matches = []
+    for p in all_players:
+        pl = p.lower()
+        if any(w in pl for w in words):
+            matches.append(p)
+    return matches[:n]
+
 # Player Profile Tab
 with tabs[4]:
     st.markdown("<br>", unsafe_allow_html=True)
-    search_col, _ = st.columns([2, 3])
-    with search_col:
-        profile_search = st.text_input(
+
+    all_players = get_all_players()
+
+    col_search, col_drop, _ = st.columns([2, 2, 1])
+
+    with col_search:
+        search_query = st.text_input(
             "",
-            placeholder="🔍 Type exact player name (e.g. V Kohli, RG Sharma, JJ Bumrah)...",
+            placeholder="🔍 Type name e.g. Kohli, Virat, Bumrah, Dhoni...",
             key="profile_search"
         )
-    if profile_search:
-        # Try exact match first, then partial
-        exact = deliveries[
-            (deliveries["batter"].str.lower() == profile_search.lower()) |
-            (deliveries["bowler"].str.lower() == profile_search.lower())
-        ]
-        if len(exact) == 0:
-            # Show suggestions
-            all_players = pd.concat([
-                deliveries["batter"].drop_duplicates(),
-                deliveries["bowler"].drop_duplicates()
-            ]).drop_duplicates()
-            suggestions = all_players[
-                all_players.str.lower().str.contains(profile_search.lower())
-            ].head(8).tolist()
-            if suggestions:
-                st.markdown("**Did you mean:**")
-                for s in suggestions:
-                    st.markdown(f"→ `{s}`")
-            else:
-                st.warning("No player found. Check spelling.")
-        else:
-            player_profile(profile_search)
-    else:
+
+    # Build dropdown suggestions from search query
+    suggestions = []
+    resolved = None
+
+    if search_query:
+        resolved = resolve_player(search_query, all_players)
+        if not resolved:
+            suggestions = fuzzy_suggestions(search_query, all_players)
+
+    with col_drop:
+        if suggestions:
+            st.markdown("<br>", unsafe_allow_html=True)
+            selected = st.selectbox(
+                "Select player from results:",
+                options=["— select —"] + suggestions,
+                key="player_select"
+            )
+            if selected != "— select —":
+                resolved = selected
+        elif search_query and not resolved:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.warning("No match found. Try a different spelling.")
+
+    if resolved:
+        player_profile(resolved)
+    elif not search_query:
         st.markdown("""
         <div style='text-align:center; padding: 3rem; color: #5a6070;'>
             <div style='font-size:3rem; margin-bottom:1rem'>👤</div>
@@ -881,8 +975,8 @@ with tabs[4]:
                 Search any IPL player
             </div>
             <div style='font-size:0.85rem; margin-top:0.5rem'>
-                Type a player name above to see their full career breakdown —
-                batting stats, bowling stats, phase analysis, and runs distribution
+                Type a name above — full name, last name, or nickname all work.<br>
+                e.g. "Kohli", "Virat", "Dhoni", "MSD", "Bumrah", "Bhuvi", "Gabbar"
             </div>
         </div>
         """, unsafe_allow_html=True)
