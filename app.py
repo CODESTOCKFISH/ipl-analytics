@@ -654,9 +654,164 @@ def team_contribution(df):
         st.plotly_chart(fig2, use_container_width=True)
 
 # -------------------------
+# PLAYER PROFILE FUNCTION
+# -------------------------
+def player_profile(name):
+    st.markdown(f'<div class="phase-badge">👤 Player Profile — {name}</div>', unsafe_allow_html=True)
+
+    bat_data = deliveries[deliveries["batter"].str.lower() == name.lower()]
+    bowl_data = deliveries[deliveries["bowler"].str.lower() == name.lower()]
+
+    is_batter = len(bat_data) > 20
+    is_bowler = len(bowl_data) > 20
+
+    if not is_batter and not is_bowler:
+        st.warning(f"No data found for '{name}'. Check spelling or try a partial name.")
+        return
+
+    if is_batter:
+        st.markdown('<div class="section-header">🏏 Batting Profile</div>', unsafe_allow_html=True)
+
+        # Career batting stats
+        total_runs  = int(bat_data["batsman_runs"].sum())
+        total_balls = int(bat_data["ball"].count())
+        total_4s    = int((bat_data["batsman_runs"] == 4).sum())
+        total_6s    = int((bat_data["batsman_runs"] == 6).sum())
+        sr          = round((total_runs / total_balls) * 100, 2) if total_balls > 0 else 0
+        dismissals  = int(bat_data["is_wicket"].sum())
+        avg         = round(total_runs / dismissals, 2) if dismissals > 0 else total_runs
+
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        for col, label, val in [
+            (c1, "Runs",      f"{total_runs:,}"),
+            (c2, "Balls",     f"{total_balls:,}"),
+            (c3, "SR",        f"{sr}"),
+            (c4, "Average",   f"{avg}"),
+            (c5, "Fours",     f"{total_4s}"),
+            (c6, "Sixes",     f"{total_6s}"),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">{label}</div>
+                    <div class="kpi-value" style="font-size:1.6rem">{val}</div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Phase breakdown
+        phases_bat = {
+            "Powerplay": bat_data[bat_data["over"] <= 6],
+            "Middle":    bat_data[(bat_data["over"] > 6) & (bat_data["over"] < 16)],
+            "Death":     bat_data[bat_data["over"] >= 16],
+        }
+        phase_stats = []
+        for ph, pdata in phases_bat.items():
+            if len(pdata) > 0:
+                pr = int(pdata["batsman_runs"].sum())
+                pb = int(pdata["ball"].count())
+                phase_stats.append({
+                    "Phase": ph,
+                    "Runs": pr,
+                    "Balls": pb,
+                    "SR": round((pr/pb)*100, 1) if pb > 0 else 0
+                })
+        phase_df = pd.DataFrame(phase_stats)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            fig = px.bar(phase_df, x="Phase", y="Runs",
+                color="Phase",
+                color_discrete_sequence=["#f5a623", "#ff6b35", "#ffd97d"],
+                title="Runs by Phase")
+            fig.update_layout(height=320, showlegend=False, **PLOT_THEME)
+            st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            fig2 = px.bar(phase_df, x="Phase", y="SR",
+                color="Phase",
+                color_discrete_sequence=["#f5a623", "#ff6b35", "#ffd97d"],
+                title="Strike Rate by Phase")
+            fig2.update_layout(height=320, showlegend=False, **PLOT_THEME)
+            st.plotly_chart(fig2, use_container_width=True)
+
+        # Runs distribution donut
+        run_dist = bat_data["batsman_runs"].value_counts().reset_index()
+        run_dist.columns = ["runs_off_ball", "count"]
+        run_dist = run_dist[run_dist["runs_off_ball"].isin([0,1,2,3,4,6])]
+        run_dist["label"] = run_dist["runs_off_ball"].map({0:"Dots",1:"1s",2:"2s",3:"3s",4:"4s",6:"6s"})
+        fig3 = px.pie(run_dist, values="count", names="label",
+            hole=0.55,
+            color_discrete_sequence=["#1e2535","#5a6070","#9aa0b0","#f5a623","#ff6b35","#ffd97d"],
+            title="Runs Distribution")
+        fig3.update_layout(height=340, **PLOT_THEME,
+            legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#9aa0b0')))
+        st.plotly_chart(fig3, use_container_width=True)
+
+    if is_bowler:
+        st.markdown('<hr class="ipl-divider">', unsafe_allow_html=True)
+        st.markdown('<div class="section-header">🎯 Bowling Profile</div>', unsafe_allow_html=True)
+
+        total_wickets = int(bowl_data["is_wicket"].sum())
+        total_bowled  = int(bowl_data["ball"].count())
+        total_runs_g  = int(bowl_data["total_runs"].sum())
+        economy       = round((total_runs_g / total_bowled) * 6, 2) if total_bowled > 0 else 0
+        bowl_sr       = round(total_bowled / total_wickets, 2) if total_wickets > 0 else 0
+
+        c1, c2, c3, c4 = st.columns(4)
+        for col, label, val in [
+            (c1, "Wickets",  f"{total_wickets}"),
+            (c2, "Economy",  f"{economy}"),
+            (c3, "SR",       f"{bowl_sr}"),
+            (c4, "Balls",    f"{total_bowled:,}"),
+        ]:
+            with col:
+                st.markdown(f"""
+                <div class="kpi-card">
+                    <div class="kpi-label">{label}</div>
+                    <div class="kpi-value" style="font-size:1.6rem;color:#2ecc71">{val}</div>
+                </div>""", unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # Phase bowling breakdown
+        phases_bowl = {
+            "Powerplay": bowl_data[bowl_data["over"] <= 6],
+            "Middle":    bowl_data[(bowl_data["over"] > 6) & (bowl_data["over"] < 16)],
+            "Death":     bowl_data[bowl_data["over"] >= 16],
+        }
+        pbowl_stats = []
+        for ph, pdata in phases_bowl.items():
+            if len(pdata) > 0:
+                pw  = int(pdata["is_wicket"].sum())
+                pb  = int(pdata["ball"].count())
+                pr  = int(pdata["total_runs"].sum())
+                pbowl_stats.append({
+                    "Phase": ph,
+                    "Wickets": pw,
+                    "Economy": round((pr/pb)*6, 2) if pb > 0 else 0
+                })
+        pbowl_df = pd.DataFrame(pbowl_stats)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            fig4 = px.bar(pbowl_df, x="Phase", y="Wickets",
+                color="Phase",
+                color_discrete_sequence=["#2ecc71","#27ae60","#a8e6cf"],
+                title="Wickets by Phase")
+            fig4.update_layout(height=320, showlegend=False, **PLOT_THEME)
+            st.plotly_chart(fig4, use_container_width=True)
+        with col2:
+            fig5 = px.bar(pbowl_df, x="Phase", y="Economy",
+                color="Phase",
+                color_discrete_sequence=["#2ecc71","#27ae60","#a8e6cf"],
+                title="Economy by Phase")
+            fig5.update_layout(height=320, showlegend=False, **PLOT_THEME)
+            st.plotly_chart(fig5, use_container_width=True)
+
+# -------------------------
 # TABS
 # -------------------------
-tabs = st.tabs(["⚡ Powerplay", "🔄 Middle Overs", "💀 Death Overs", "🏏 Overall"])
+tabs = st.tabs(["⚡ Powerplay", "🔄 Middle Overs", "💀 Death Overs", "🏏 Overall", "👤 Player Profile"])
 
 phases = {
     "Powerplay":   deliveries[deliveries["over"] <= 6],
@@ -672,7 +827,7 @@ phase_labels = {
     "Overall":   "🏏 Full Tournament"
 }
 
-for tab, name in zip(tabs, phases.keys()):
+for tab, name in zip(tabs[:4], phases.keys()):
     with tab:
         df = phases[name]
         show_kpis(df, phase_labels[name])
@@ -684,3 +839,50 @@ for tab, name in zip(tabs, phases.keys()):
         allrounders_phase(df, name)
         st.markdown('<hr class="ipl-divider">', unsafe_allow_html=True)
         team_contribution(df)
+
+# Player Profile Tab
+with tabs[4]:
+    st.markdown("<br>", unsafe_allow_html=True)
+    search_col, _ = st.columns([2, 3])
+    with search_col:
+        profile_search = st.text_input(
+            "",
+            placeholder="🔍 Type exact player name (e.g. V Kohli, RG Sharma, JJ Bumrah)...",
+            key="profile_search"
+        )
+    if profile_search:
+        # Try exact match first, then partial
+        exact = deliveries[
+            (deliveries["batter"].str.lower() == profile_search.lower()) |
+            (deliveries["bowler"].str.lower() == profile_search.lower())
+        ]
+        if len(exact) == 0:
+            # Show suggestions
+            all_players = pd.concat([
+                deliveries["batter"].drop_duplicates(),
+                deliveries["bowler"].drop_duplicates()
+            ]).drop_duplicates()
+            suggestions = all_players[
+                all_players.str.lower().str.contains(profile_search.lower())
+            ].head(8).tolist()
+            if suggestions:
+                st.markdown("**Did you mean:**")
+                for s in suggestions:
+                    st.markdown(f"→ `{s}`")
+            else:
+                st.warning("No player found. Check spelling.")
+        else:
+            player_profile(profile_search)
+    else:
+        st.markdown("""
+        <div style='text-align:center; padding: 3rem; color: #5a6070;'>
+            <div style='font-size:3rem; margin-bottom:1rem'>👤</div>
+            <div style='font-family:Rajdhani,sans-serif; font-size:1.4rem; font-weight:600; color:#9aa0b0'>
+                Search any IPL player
+            </div>
+            <div style='font-size:0.85rem; margin-top:0.5rem'>
+                Type a player name above to see their full career breakdown —
+                batting stats, bowling stats, phase analysis, and runs distribution
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
